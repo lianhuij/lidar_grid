@@ -48,14 +48,17 @@ protected:
     double threshold;         //地面点阈值
     float ground_z;           //自车位置地面z坐标值
     float max_gradient;       //最大坡度阈值
-    float cut_width;          //裁剪宽度
+    float cut_width;          //可通行域裁剪宽度
+    float cut_x;              //裁剪近处自车点x范围
+    float cut_y;              //裁剪近处自车点y范围
     int y_width;              //输出栅格地图一侧宽度
     int x_forward;            //输出栅格地图前向长度
     int x_backward;           //输出栅格地图后向长度
 
 public:
     LidarCloudHandler(): R(60), TH(180), grid_size_r(0.4), grid_size(0.2), threshold(0.1), ground_z(-1.7), max_gradient(0.17),
-                         cut_width(1.7), y_width(50), x_forward(100), x_backward(100)
+                         cut_width(1.7), cut_x(2), cut_y(0.9),
+                         y_width(50), x_forward(100), x_backward(100)
     {
         pc_sub = nh.subscribe("velodyne_points", 1, &LidarCloudHandler::rasterization, this); //接受话题：velodyne_points
         grid_pub = nh.advertise<nav_msgs::GridCells>("grid_cell", 1);                         //发布话题：grid_cell
@@ -92,9 +95,15 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
 //////////////////////////////遍历输入点云，初步筛选，将点划入极坐标栅格内///////////////////////////////
     for (m=0; m<cloud_raw_ptr->size(); ++m)   
     {
+        if(cloud_raw_ptr->points[m].x > -cut_x && cloud_raw_ptr->points[m].x < cut_x
+           && cloud_raw_ptr->points[m].y > -cut_y && cloud_raw_ptr->points[m].y < cut_y)
+        {
+            continue;  //裁剪近处自车点
+        }
+        
         if(cloud_raw_ptr->points[m].x > radius || cloud_raw_ptr->points[m].x < -radius)
         {
-            continue;  //排除x坐标大于半径的数据
+            continue;  //排除x坐标绝对值大于半径的数据
         }
 
         if(cloud_raw_ptr->points[m].y > radius || cloud_raw_ptr->points[m].y < -radius)
