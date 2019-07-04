@@ -31,7 +31,7 @@ public:
     float avg_z;
 };
 
-///////////////////////激光雷达点云栅格化处理类////////////////////////
+///////////////////////激光雷达点云栅格化处理类 梯度方法////////////////////////
 class LidarCloudHandler
 {
 protected:
@@ -56,9 +56,9 @@ protected:
     int x_backward;           //输出栅格地图后向长度
 
 public:
-    LidarCloudHandler(): R(60), TH(180), grid_size_r(0.4), grid_size(0.2), threshold(0.1), ground_z(-1.7), max_gradient(0.17),
-                         cut_width(1.7), cut_x(2), cut_y(0.9),
-                         y_width(50), x_forward(100), x_backward(100)
+    LidarCloudHandler(): R(60), TH(180), grid_size_r(0.4), grid_size(0.2), threshold(0.1), ground_z(-1.6), max_gradient(0.17),
+                         cut_width(1.7), cut_x(1.5), cut_y(0.8),
+                         y_width(50), x_forward(100), x_backward(0)
     {
         pc_sub = nh.subscribe("velodyne_points", 1, &LidarCloudHandler::rasterization, this); //接受话题：velodyne_points
         grid_pub = nh.advertise<nav_msgs::GridCells>("grid_cell", 1);                         //发布话题：grid_cell
@@ -101,9 +101,9 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
             continue;  //裁剪近处自车点
         }
         
-        if(cloud_raw_ptr->points[m].x > radius || cloud_raw_ptr->points[m].x < -radius)
+        if(cloud_raw_ptr->points[m].x > radius || cloud_raw_ptr->points[m].x < 0)
         {
-            continue;  //排除x坐标绝对值大于半径的数据
+            continue;  //排除x坐标大于半径或小于0的数据
         }
 
         if(cloud_raw_ptr->points[m].y > radius || cloud_raw_ptr->points[m].y < -radius)
@@ -159,7 +159,7 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
                 pcl::getMinMax3D (*grid[i][j].grid_cloud_ptr, minpoint, maxpoint);   //这里的最大最小是值，不是对应一个点
                 h = maxpoint.z - minpoint.z;                                         //该栅格内数据点的最大高度差
                 
-                if (h<threshold && maxpoint.z<-0.5)  //最大高度差小于阈值且z小于-0.5m的点归为地面候选点
+                if (h < threshold)  //最大高度差小于阈值的点归为地面候选点
                 {
                     grid[i][j].state = ground;
 
@@ -181,6 +181,11 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
 ////////////////////////////遍历极坐标栅格地图，用梯度判断可通行区域/////////////////////////////
     for(j=0; j<TH; ++j)    
     {
+        if(j>=TH/4 && j<TH/4*3)
+        {
+            continue;  //跳过后部区域
+        }
+        
         for(i=0; i<R; ++i)
         {
             if(i == 0)
@@ -376,6 +381,14 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
             if(t == TH)
             {
                 t = 0;
+            }
+            else if(t == TH/4)
+            {
+                t = t-1;
+            }
+            else if(t == TH/4*3-1)
+            {
+                t == TH/4*3;
             }
 
             if(a == R)

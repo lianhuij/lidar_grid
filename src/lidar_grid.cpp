@@ -54,7 +54,7 @@ public:
     }
 };
 
-///////////////////////激光雷达点云栅格化处理类////////////////////////
+///////////////////////激光雷达点云栅格化处理类 RANSAC方法////////////////////////
 class LidarCloudHandler
 {
 protected:
@@ -79,8 +79,8 @@ protected:
 
 public:
     LidarCloudHandler(): R(60), TH(180), grid_size_r(0.4), grid_size(0.2), threshold(0.1), 
-                         cut_width(1.7), cut_x(2), cut_y(0.9),
-                         y_width(50), x_forward(100), x_backward(100)
+                         cut_width(1.7), cut_x(1.5), cut_y(0.8),
+                         y_width(50), x_forward(100), x_backward(0)
     {
         pc_sub = nh.subscribe("velodyne_points", 1, &LidarCloudHandler::rasterization, this); //接受话题：velodyne_points
         grid_pub = nh.advertise<nav_msgs::GridCells>("grid_cell", 1);                         //发布话题：grid_cell
@@ -130,9 +130,9 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
             continue;  //裁剪近处自车点
         }
         
-        if(cloud_raw_ptr->points[m].x > radius || cloud_raw_ptr->points[m].x < -radius)
+        if(cloud_raw_ptr->points[m].x > radius || cloud_raw_ptr->points[m].x < 0)
         {
-            continue;  //排除x坐标绝对值大于半径的数据
+            continue;  //排除x坐标大于半径或小于0的数据
         }
 
         if(cloud_raw_ptr->points[m].y > radius || cloud_raw_ptr->points[m].y < -radius)
@@ -275,6 +275,11 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
 ////////////////////////////////////通过障碍物点云提取可通行区域边界////////////////////////////////
     for(j=0; j<TH; ++j)  //遍历障碍物列表obstacle
     {
+        if(j>=TH/4 && j<TH/4*3)
+        {
+            continue;  //跳过后部区域
+        }
+        
         num = obstacle[j].grid_cloud_ptr->size();
 
         if(num == 0)  //该扇形区域无障碍物点
@@ -473,6 +478,14 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
             if(t == TH)
             {
                 t = 0;
+            }
+            else if(t == TH/4)
+            {
+                t = t-1;
+            }
+            else if(t == TH/4*3-1)
+            {
+                t == TH/4*3;
             }
 
             if(a == R)
