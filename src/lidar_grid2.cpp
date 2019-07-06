@@ -8,8 +8,6 @@
 #include <cmath>
 #include <time.h>
 
-#define fixed_frame "velodyne"
-
 enum RoadState
 {
   unknown,
@@ -39,6 +37,7 @@ protected:
     ros::Subscriber pc_sub;
     ros::Publisher grid_pub;
     ros::Publisher time_pub;
+    std::string fixed_frame;
     int R;                    //半径上的分割数
     int TH;                   //角度上的分割数
     float grid_size_r;        //半径上的分辨率
@@ -56,14 +55,26 @@ protected:
     int x_backward;           //输出栅格地图后向长度
 
 public:
-    LidarCloudHandler(): R(60), TH(180), grid_size_r(0.4), grid_size(0.2), threshold(0.1), ground_z(-1.6), max_gradient(0.17),
-                         cut_width(1.7), cut_x(1.5), cut_y(0.8),
-                         y_width(50), x_forward(100), x_backward(0)
+    LidarCloudHandler()
     {
         pc_sub = nh.subscribe("velodyne_points", 1, &LidarCloudHandler::rasterization, this); //接受话题：velodyne_points
         grid_pub = nh.advertise<nav_msgs::GridCells>("grid_cell", 1);                         //发布话题：grid_cell
         time_pub = nh.advertise<std_msgs::Float32>("time", 1);                                //发布话题：time
 
+        nh.getParam("/lidar_grid2/fixed_frame", fixed_frame);
+        nh.getParam("/lidar_grid2/R", R);
+        nh.getParam("/lidar_grid2/TH", TH);
+        nh.getParam("/lidar_grid2/grid_size_r", grid_size_r);
+        nh.getParam("/lidar_grid2/grid_size", grid_size);
+        nh.getParam("/lidar_grid2/threshold", threshold);
+        nh.getParam("/lidar_grid2/ground_z", ground_z);
+        nh.getParam("/lidar_grid2/max_gradient", max_gradient);
+        nh.getParam("/lidar_grid2/cut_width", cut_width);
+        nh.getParam("/lidar_grid2/cut_x", cut_x);
+        nh.getParam("/lidar_grid2/cut_y", cut_y);
+        nh.getParam("/lidar_grid2/y_width", y_width);
+        nh.getParam("/lidar_grid2/x_forward", x_forward);
+        nh.getParam("/lidar_grid2/x_backward", x_backward);
         grid_size_th = 2*M_PI/TH;
         radius = R*grid_size_r;
     }
@@ -417,7 +428,7 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
 ////////////////////////////////////////////主函数///////////////////////////////////////////////////
 int main(int argc,char** argv)
 {
-    ros::init(argc,argv,"lidar_grid");
+    ros::init(argc,argv,"lidar_grid2");
 
     LidarCloudHandler handler;
         

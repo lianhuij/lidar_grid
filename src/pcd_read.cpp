@@ -4,10 +4,6 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl/io/pcd_io.h>
 
-#define pcd_file "/home/lhj/catkin_ws/src/data/road4_0515.pcd"
-#define fixed_frame "velodyne"
-#define pub_hz 10    //10Hz 发送频率
-
 main(int argc, char **argv)
 {
     ros::init (argc, argv, "pcd_read");
@@ -17,6 +13,13 @@ main(int argc, char **argv)
     sensor_msgs::PointCloud2 output;
     pcl::PointCloud<pcl::PointXYZ> cloud;
 
+    std::string pcd_file;
+    std::string fixed_frame;
+    int pub_hz;
+    nh.getParam("/pcd_read/pcd_file", pcd_file);
+    nh.getParam("/pcd_read/fixed_frame", fixed_frame);
+    nh.getParam("/pcd_read/pub_hz", pub_hz);
+    
     pcl::io::loadPCDFile (pcd_file, cloud);   //从硬盘加载点云文件
     pcl::toROSMsg(cloud, output);
     output.header.frame_id = fixed_frame;
