@@ -219,3 +219,11 @@ add_dependencies(lidar_grid2 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORT
 target_link_libraries(lidar_grid2
   ${catkin_LIBRARIES}
 )
+
+add_executable(lidar_calibration
+  src/lidar_calibration.cpp
+)
+add_dependencies(lidar_calibration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(lidar_calibration
+  ${catkin_LIBRARIES}
+)
