@@ -77,7 +77,7 @@ protected:
 public:
     LidarCloudHandler()
     {
-        pc_sub = nh.subscribe("cali_pc", 1, &LidarCloudHandler::rasterization, this);    //接受话题：cali_pc
+        pc_sub = nh.subscribe("cali_pc", 1, &LidarCloudHandler::rasterization, this);    //接收话题：cali_pc
         grid_pub = nh.advertise<nav_msgs::GridCells>("grid_cell", 1);                    //发布话题：grid_cell
         time_pub = nh.advertise<std_msgs::Float32>("time", 1);                           //发布话题：time
         ground_z_pub = nh.advertise<std_msgs::Float32>("ground_z", 1);                   //发布话题：ground_z
@@ -129,7 +129,8 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
 //////////////////////////////遍历输入点云，初步筛选，将点划入极坐标栅格内///////////////////////////////
     for (m=0; m<cloud_raw_ptr->size(); ++m)   
     {
-        r = sqrt(pow(cloud_raw_ptr->points[m].x,2) + pow(cloud_raw_ptr->points[m].y,2));  //XY平面内，点到原点的距离              
+        r = sqrt(cloud_raw_ptr->points[m].x * cloud_raw_ptr->points[m].x
+                 + cloud_raw_ptr->points[m].y * cloud_raw_ptr->points[m].y);  //XY平面内，点到原点的距离              
 
         if(r > radius)
         {
@@ -221,7 +222,7 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
 
     std_msgs::Float32 ground_z;
     ground_z.data = ave;
-    ground_z_pub.publish(ground_z);
+    ground_z_pub.publish(ground_z);  //发布地面高度
 
     extract.setNegative (true);
     extract.filter (*cloud_temp2_ptr);
@@ -238,8 +239,17 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
 
     for (m=0; m<cloud_obstacle_ptr->size(); ++m)   //遍历障碍物点云
     {
-        r = sqrt(pow(cloud_obstacle_ptr->points[m].x,2) + pow(cloud_obstacle_ptr->points[m].y,2));  //点到原点的距离
-        th = acos(cloud_obstacle_ptr->points[m].x/r);//点对应的向量的角度（以x轴正方向为零角度）
+        if(x_backward == 0)
+        {
+            if(cloud_obstacle_ptr->points[m].x < 0)
+            {
+                continue;  //跳过后部区域
+            }
+        }
+        
+        r = sqrt(cloud_obstacle_ptr->points[m].x * cloud_obstacle_ptr->points[m].x
+                 + cloud_obstacle_ptr->points[m].y * cloud_obstacle_ptr->points[m].y);  //点到原点的距离
+        th = acos(cloud_obstacle_ptr->points[m].x/r);  //点对应的向量的角度（以x轴正方向为零角度）
         
         if(cloud_obstacle_ptr->points[m].y<0)
         {
@@ -259,9 +269,12 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
 ////////////////////////////////////通过障碍物点云提取可通行区域边界////////////////////////////////
     for(j=0; j<TH; ++j)  //遍历障碍物列表obstacle
     {
-        if(j>=TH/4 && j<TH/4*3)
+        if(x_backward == 0)
         {
-            continue;  //跳过后部区域
+            if(j>=TH/4 && j<TH/4*3)
+            {
+                continue;  //跳过后部区域
+            }
         }
         
         num = obstacle[j].grid_cloud_ptr->size();
@@ -303,15 +316,17 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
         obstacle[j].grid_cloud_ptr->points[min_idx].z = ave;
         cloud_boundary_ptr->points.push_back(obstacle[j].grid_cloud_ptr->points[min_idx]);     //取每个小扇形区域内最近的障碍物点为边界点
 
-        r = sqrt(pow(obstacle[j].grid_cloud_ptr->points[min_idx].x,2) + pow(obstacle[j].grid_cloud_ptr->points[min_idx].y,2));
-        r = floor(r/grid_size_r);
+        r = sqrt(obstacle[j].grid_cloud_ptr->points[min_idx].x * obstacle[j].grid_cloud_ptr->points[min_idx].x
+                 + obstacle[j].grid_cloud_ptr->points[min_idx].y * obstacle[j].grid_cloud_ptr->points[min_idx].y);
+        a = floor(r/grid_size_r);
 
-        for(i=0; i<r; ++i)
+        for(i=0; i<a; ++i)
         {
             grid[i][j].IsDrivable = true;
         }
     }
 
+////////////////////////////对极坐标可通行区域进行裁剪/////////////////////////////
     int cnt = 1;
     int left_flag = 0;
     int right_flag = 0;
@@ -319,7 +334,7 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
     int left_cut = 0;
     int right_cut = 0;
 
-    for(i=0; i<R; ++i)       //对极坐标可通行区域进行裁剪
+    for(i=0; i<R; ++i)
     {
         for(j=0; j<TH; ++j)
         {
@@ -435,7 +450,7 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
     }
 
 ////////////////////////极坐标系栅格地图转化为直角坐标系可通行区域栅格地图////////////////////
-    for(j=-y_width; j<=y_width; ++j)     //建立直角坐标系栅格地图
+    for(j=-y_width; j<=y_width; ++j)
     {//1
         for(i=-x_backward; i<=x_forward; ++i)
         {//2
@@ -448,7 +463,8 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
                 continue;
             }
 
-            r = sqrt(pow((float)(grid_size*i),2)+pow((float)(grid_size*j),2));
+            r = sqrt((float)(grid_size*i) * (float)(grid_size*i)
+                     + (float)(grid_size*j) * (float)(grid_size*j));
             th = acos((float)(grid_size*i)/r);
 
             if(j < 0)
@@ -462,14 +478,17 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
             if(t == TH)
             {
                 t = 0;
-            }
-            else if(t == TH/4)
+            } 
+            else if(x_backward == 0)
             {
-                t = t-1;
-            }
-            else if(t == TH/4*3-1)
-            {
-                t == TH/4*3;
+                if(t == TH/4)
+                {
+                    t = t-1;
+                }
+                else if(t == TH/4*3-1)
+                {
+                    t == TH/4*3;
+                }
             }
 
             if(a == R)
@@ -487,12 +506,12 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
         }//2   
     }//1
 
-    grid_pub.publish(grid_cell);
+    grid_pub.publish(grid_cell);  //发布栅格地图
 
     clock_t end = clock();
     std_msgs::Float32 time;
     time.data = (float)(end-start)*1000/(float)CLOCKS_PER_SEC;  //程序用时 ms
-    time_pub.publish(time);
+    time_pub.publish(time);   //发布程序耗时
 }
 
 ////////////////////////////////////////////主函数///////////////////////////////////////////////////

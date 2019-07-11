@@ -23,7 +23,7 @@ public:
     pcl::PointCloud<pcl::PointXYZ>::Ptr grid_cloud_ptr;
 };
 
-///////////////////////激光雷达点云地平面校正标定处理类////////////////////////
+///////////////////////激光雷达点云地平面校正处理类////////////////////////
 class LidarCloudHandler
 {
 protected:
@@ -45,7 +45,7 @@ protected:
 public:
     LidarCloudHandler()
     {
-        pc_sub = nh.subscribe("velodyne_points", 1, &LidarCloudHandler::calibration, this);   //接受话题：velodyne_points
+        pc_sub = nh.subscribe("velodyne_points", 1, &LidarCloudHandler::calibration, this);   //接收话题：velodyne_points
         pc_pub = nh.advertise<sensor_msgs::PointCloud2>("cali_pc", 1);                        //发布话题：cali_pc
         time_pub = nh.advertise<std_msgs::Float32>("cali_time", 1);                           //发布话题：cali_time
 
@@ -64,7 +64,7 @@ public:
     void calibration(const sensor_msgs::PointCloud2& input);
 };
 
-//////////////////////////激光雷达点云栅格化及地面可通行区域提取函数///////////////////////////
+//////////////////////////激光雷达点云地平面校正函数///////////////////////////
 void LidarCloudHandler::calibration(const sensor_msgs::PointCloud2& input)
 {
     clock_t start = clock();
@@ -101,17 +101,18 @@ void LidarCloudHandler::calibration(const sensor_msgs::PointCloud2& input)
         {
             continue;  //排除y坐标绝对值大于半径的数据
         }
+
+        if(cloud_raw_ptr->points[m].z > 0)   
+        {
+            continue;  //所有高于车辆高度的点在栅格地图中排除
+        }
         
-        r = sqrt(pow(cloud_raw_ptr->points[m].x,2) + pow(cloud_raw_ptr->points[m].y,2));  //XY平面内，点到原点的距离              
+        r = sqrt(cloud_raw_ptr->points[m].x * cloud_raw_ptr->points[m].x
+                + cloud_raw_ptr->points[m].y * cloud_raw_ptr->points[m].y);  //XY平面内，点到原点的距离              
 
         if(r > radius)
         {
             continue;   //不考虑地图半径外的点    
-        }
-
-        if(cloud_raw_ptr->points[m].z > 0)   //所有高于车辆高度的点在栅格地图中排除
-        {
-            continue;
         }
 
         th = acos(cloud_raw_ptr->points[m].x/r);//点对应的向量的角度（以x轴正方向为零角度）
@@ -210,12 +211,12 @@ void LidarCloudHandler::calibration(const sensor_msgs::PointCloud2& input)
     pcl::toROSMsg(*cloud_trans_ptr, pcl_output);
     pcl_output.header.frame_id = fixed_frame;
 
-    pc_pub.publish(pcl_output);
+    pc_pub.publish(pcl_output);  //发布校正点云
 
     clock_t end = clock();
     std_msgs::Float32 cali_time;
     cali_time.data = (float)(end-start)*1000/(float)CLOCKS_PER_SEC;  //程序用时 ms
-    time_pub.publish(cali_time);
+    time_pub.publish(cali_time);  //发布程序耗时
 }
 
 ////////////////////////////////////////////主函数///////////////////////////////////////////////////

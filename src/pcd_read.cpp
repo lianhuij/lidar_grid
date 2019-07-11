@@ -8,7 +8,7 @@ main(int argc, char **argv)
 {
     ros::init (argc, argv, "pcd_read");
     ros::NodeHandle nh;
-    ros::Publisher pcl_pub = nh.advertise<sensor_msgs::PointCloud2> ("velodyne_points", 1);  //发送话题：velodyne_points
+    ros::Publisher pcl_pub = nh.advertise<sensor_msgs::PointCloud2> ("velodyne_points", 1);  //发布话题：velodyne_points
 
     sensor_msgs::PointCloud2 output;
     pcl::PointCloud<pcl::PointXYZ> cloud;

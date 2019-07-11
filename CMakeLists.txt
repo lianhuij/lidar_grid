@@ -227,3 +227,11 @@ add_dependencies(lidar_calibration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_
 target_link_libraries(lidar_calibration
   ${catkin_LIBRARIES}
 )
+
+add_executable(azimuth_calibration
+  src/azimuth_calibration.cpp
+)
+add_dependencies(azimuth_calibration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(azimuth_calibration
+  ${catkin_LIBRARIES}
+)
