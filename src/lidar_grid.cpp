@@ -12,6 +12,7 @@
 #include <pcl/common/common.h>
 #include <cmath>
 #include <time.h>
+#include <vector>
 
 class Grid
 {
@@ -23,33 +24,6 @@ public:
     pcl::PointCloud<pcl::PointXYZ>::Ptr grid_cloud_ptr;
     bool IsDrivable;
     bool IsChecked;
-};
-
-class Array
-{
-    float* a;
-    int len;
-public:
-    Array(int n, float init=0): a(new float[n]),len(n)
-    {
-        for(int i=0; i<n; ++i) a[i]=init;
-    }
-    ~Array()
-    {
-        delete[] a;
-    }
-    void set(int idx, float val)
-    {
-        a[idx]=val;
-    }
-    int get(int idx)
-    {
-        return a[idx];
-    }
-    int size()
-    {
-        return len;
-    }
 };
 
 ///////////////////////激光雷达点云栅格化处理类 RANSAC方法////////////////////////
@@ -296,19 +270,20 @@ void LidarCloudHandler::rasterization(const sensor_msgs::PointCloud2& input)
             continue;
         }
 
-        Array array(num);
+        std::vector<float> array;
+        array.resize(num);
 
         for(i=0; i<num; ++i)
         {
-            array.set(i, (fabs(obstacle[j].grid_cloud_ptr->points[i].x) + fabs(obstacle[j].grid_cloud_ptr->points[i].y)));
+            array[i] = fabs(obstacle[j].grid_cloud_ptr->points[i].x) + fabs(obstacle[j].grid_cloud_ptr->points[i].y);
             if(i == 0)
             {
-                min = array.get(i);
+                min = array[i];
                 min_idx = i;
             }
-            if(array.get(i) < min)
+            if(array[i] < min)
             {
-                min = array.get(i);
+                min = array[i];
                 min_idx = i;
             }
         }

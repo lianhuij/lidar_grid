@@ -65,4 +65,7 @@
 <exec_depend>pcl_ros</exec_depend>
 <exec_depend>sensor_msgs</exec_depend>
 <exec_depend>nav_msgs</exec_depend>
+<build_depend>visualization_msgs</build_depend>
+<build_export_depend>visualization_msgs</build_export_depend>
+<exec_depend>visualization_msgs</exec_depend>
 </package>

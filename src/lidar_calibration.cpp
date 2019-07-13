@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Float32.h>
+#include <visualization_msgs/Marker.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/ModelCoefficients.h>
@@ -30,6 +31,7 @@ protected:
     ros::NodeHandle nh;
     ros::Subscriber pc_sub;
     ros::Publisher pc_pub;
+    ros::Publisher ego_pub;
     ros::Publisher time_pub;
     std::string fixed_frame;
     int R;                    //半径上的分割数
@@ -47,6 +49,7 @@ public:
     {
         pc_sub = nh.subscribe("velodyne_points", 1, &LidarCloudHandler::calibration, this);   //接收话题：velodyne_points
         pc_pub = nh.advertise<sensor_msgs::PointCloud2>("cali_pc", 1);                        //发布话题：cali_pc
+        ego_pub = nh.advertise<visualization_msgs::Marker>("ego_car", 1);                     //发布话题：ego_car 几何形状
         time_pub = nh.advertise<std_msgs::Float32>("cali_time", 1);                           //发布话题：cali_time
 
         nh.getParam("/lidar_calibration/fixed_frame", fixed_frame);
@@ -212,6 +215,32 @@ void LidarCloudHandler::calibration(const sensor_msgs::PointCloud2& input)
     pcl_output.header.frame_id = fixed_frame;
 
     pc_pub.publish(pcl_output);  //发布校正点云
+
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = fixed_frame;
+    marker.header.stamp = ros::Time::now();
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.action = visualization_msgs::Marker::ADD;
+
+    marker.pose.position.x = 0;
+    marker.pose.position.y = 0;
+    marker.pose.position.z = -0.9;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+
+    marker.scale.x = 3.2;
+    marker.scale.y = 1.7;
+    marker.scale.z = 1.7;
+
+    marker.color.r = 0;
+    marker.color.g = 0;
+    marker.color.b = 0.5;
+    marker.color.a = 0.7;
+
+    marker.lifetime = ros::Duration();
+    ego_pub.publish(marker);  //发布自车几何形状
 
     clock_t end = clock();
     std_msgs::Float32 cali_time;
