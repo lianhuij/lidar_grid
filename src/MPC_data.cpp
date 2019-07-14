@@ -43,21 +43,21 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
         geometry_msgs::Point camera_pos;
 
         radar_pos.x = (input.data[0]*256 + input.data[1])/100 + x_offset;
-        radar_pos.y = (input.data[2]*256 + input.data[3])/10;
+        radar_pos.y = (input.data[2]*256 + input.data[3] - 65536)/10;
         camera_pos.x = (input.data[4]*256 + input.data[5])/100 + x_offset;
-        camera_pos.y = (input.data[6]*256 + input.data[7])/16;
+        camera_pos.y = (input.data[6]*256 + input.data[7] - 65536)/16;
 
-        radar_pub.publish(radar_pos);
-        camera_pub.publish(camera_pos);
+        radar_pub.publish(radar_pos);     //发布毫米波雷达目标位置
+        camera_pub.publish(camera_pos);   //发布摄像头目标位置
     }
     else if(input.id == 0x564)
     {
         geometry_msgs::Point fusion_pos;
 
         fusion_pos.x = (input.data[0]*256 + input.data[1])/100 + x_offset;
-        fusion_pos.y = (input.data[2]*256 + input.data[3])/10;
+        fusion_pos.y = (input.data[2]*256 + input.data[3] - 65536)/10;
 
-        fusion_pub.publish(fusion_pos);
+        fusion_pub.publish(fusion_pos);   //发布毫米波雷达和摄像头的融合位置
 
         visualization_msgs::Marker nearest;
 
@@ -82,7 +82,7 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
         nearest.color.a = 0.7;
         nearest.lifetime = ros::Duration();
 
-        obj_pub.publish(nearest);
+        obj_pub.publish(nearest);    //发布最近目标几何形状
     }
 }
 
