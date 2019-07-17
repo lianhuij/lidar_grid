@@ -5,13 +5,6 @@
 #include <pcl/point_types.h>
 #include <pcl/common/common.h>
 #include <visualization_msgs/Marker.h>
-#include <visualization_msgs/MarkerArray.h>
-#include <vector>
-
-typedef struct OBJECT {
-    float x;
-    float y;
-} Objects;
 
 ///////////////////////激光雷达点云方位角标定处理类////////////////////////
 class LidarCloudHandler
@@ -21,7 +14,6 @@ protected:
     ros::Subscriber pc_sub;
     ros::Publisher pc_pub;
     ros::Publisher ego_pub;
-    ros::Publisher obj_pub;
     std::string fixed_frame;
     float cut_x;              //裁剪近处自车点x范围
     float cut_y;              //裁剪近处自车点y范围
@@ -32,7 +24,6 @@ public:
         pc_sub = nh.subscribe("velodyne_points", 1, &LidarCloudHandler::azi_calibration, this);   //接收话题：velodyne_points
         pc_pub = nh.advertise<sensor_msgs::PointCloud2>("azi_pc", 1);                             //发布话题：azi_pc
         ego_pub = nh.advertise<visualization_msgs::Marker>("ego_car", 1);                         //发布话题：ego_car 几何形状
-        obj_pub = nh.advertise<visualization_msgs::MarkerArray>("objects", 1);
 
         nh.getParam("/azimuth_calibration/fixed_frame", fixed_frame);
         nh.getParam("/azimuth_calibration/cut_x", cut_x);
@@ -141,41 +132,6 @@ void LidarCloudHandler::azi_calibration(const sensor_msgs::PointCloud2& input)
     marker.lifetime = ros::Duration();
 
     ego_pub.publish(marker);  //发布自车几何形状
-
-    visualization_msgs::MarkerArray objects;  //test
-    objects.markers.resize(2);
-    std::vector<Objects> ped;
-    ped.resize(2);
-    ped[0].x = 7;
-    ped[0].y = -2;
-    ped[1].x = 10;
-    ped[1].y = 1;
-
-    for(i=0; i<2; ++i)
-    {
-        objects.markers[i].header.frame_id = fixed_frame;
-        objects.markers[i].header.stamp = ros::Time::now();
-        objects.markers[i].type = visualization_msgs::Marker::CYLINDER;
-        objects.markers[i].action = visualization_msgs::Marker::ADD;
-        objects.markers[i].id = i;
-        objects.markers[i].pose.position.x = ped[i].x;
-        objects.markers[i].pose.position.y = ped[i].y;
-        objects.markers[i].pose.position.z = -0.9;
-        objects.markers[i].pose.orientation.x = 0.0;
-        objects.markers[i].pose.orientation.y = 0.0;
-        objects.markers[i].pose.orientation.z = 0.0;
-        objects.markers[i].pose.orientation.w = 1.0;
-        objects.markers[i].scale.x = 0.6;
-        objects.markers[i].scale.y = 0.6;
-        objects.markers[i].scale.z = 1.7;
-        objects.markers[i].color.r = 0;
-        objects.markers[i].color.g = 0;
-        objects.markers[i].color.b = 0.5;
-        objects.markers[i].color.a = 0.7;
-        objects.markers[i].lifetime = ros::Duration();
-    }
-
-    obj_pub.publish(objects);
 }
 
 ////////////////////////////////////////////主函数///////////////////////////////////////////////////

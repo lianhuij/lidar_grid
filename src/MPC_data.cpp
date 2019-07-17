@@ -27,7 +27,7 @@ protected:
 public:
     MPCDataHandler()
     {
-        can_sub = nh.subscribe("received_messages", 10, &MPCDataHandler::canHandler, this);   //接收话题：received_messages
+        can_sub = nh.subscribe("received_messages", 1, &MPCDataHandler::canHandler, this);    //接收话题：received_messages
         radar_pub = nh.advertise<geometry_msgs::Point>("radar_pos", 1);                       //发布话题：radar_pos
         camera_pub = nh.advertise<geometry_msgs::Point>("camera_pos", 1);                     //发布话题：camera_pos
         rawobj_pub = nh.advertise<visualization_msgs::MarkerArray>("raw_objects", 1);         //发布话题：raw_objects
@@ -52,10 +52,39 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
         geometry_msgs::Point radar_pos;
         geometry_msgs::Point camera_pos;
 
-        radar_pos.x = (input.data[0]*256 + input.data[1])/100 + x_offset;
-        radar_pos.y = (input.data[2]*256 + input.data[3] - 65536)/10;
-        camera_pos.x = (input.data[4]*256 + input.data[5])/100 + x_offset;
-        camera_pos.y = (input.data[6]*256 + input.data[7] - 65536)/16;
+        radar_pos.x = (input.data[0]*256 + input.data[1])/100;
+
+        if(radar_pos.x > 0)
+        {
+            radar_pos.x = radar_pos.x + x_offset;
+        }
+
+        radar_pos.y = input.data[2]*256 + input.data[3];
+        if(radar_pos.y < 0x8000)
+        {
+            radar_pos.y = radar_pos.y / 10;
+        }
+        else
+        {
+            radar_pos.y = (radar_pos.y - 0x10000)/10;
+        }
+        
+        camera_pos.x = (input.data[4]*256 + input.data[5])/100;
+
+        if(camera_pos.x > 0)
+        {
+            camera_pos.x = camera_pos.x + x_offset;
+        }
+
+        camera_pos.y = input.data[6]*256 + input.data[7];
+        if(camera_pos.y < 0x8000)
+        {
+            camera_pos.y = camera_pos.y / 16;
+        }
+        else
+        {
+            camera_pos.y = (camera_pos.y - 0x10000)/16;
+        }
 
         radar_pub.publish(radar_pos);     //发布毫米波雷达目标位置
         camera_pub.publish(camera_pos);   //发布摄像头目标位置
@@ -75,7 +104,7 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
             objects.markers[i].header.stamp = ros::Time::now();
             objects.markers[i].type = visualization_msgs::Marker::CYLINDER;
             objects.markers[i].action = visualization_msgs::Marker::ADD;
-            objects.markers[i].id = i;
+            objects.markers[i].id = i+1;
             objects.markers[i].pose.position.x = ped[i].x;
             objects.markers[i].pose.position.y = ped[i].y;
             objects.markers[i].pose.position.z = -0.9;
@@ -91,16 +120,24 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
             {
                 objects.markers[i].color.r = 0;
                 objects.markers[i].color.g = 0;
-                objects.markers[i].color.b = 0.5;
+                objects.markers[i].color.b = 1;
             }
             else
             {
-                objects.markers[i].color.r = 0.5;
+                objects.markers[i].color.r = 1;
                 objects.markers[i].color.g = 0;
                 objects.markers[i].color.b = 0;
             }
             
-            objects.markers[i].color.a = 0.7;
+            if(ped[i].x == 0)
+            {
+                objects.markers[i].color.a = 0;
+            }
+            else
+            {
+                objects.markers[i].color.a = 0.7;
+            }
+            
             objects.markers[i].lifetime = ros::Duration();
         }
 
@@ -110,8 +147,22 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
     {
         geometry_msgs::Point fusion_pos;
 
-        fusion_pos.x = (input.data[0]*256 + input.data[1])/100 + x_offset;
-        fusion_pos.y = (input.data[2]*256 + input.data[3] - 65536)/10;
+        fusion_pos.x = (input.data[0]*256 + input.data[1])/100;
+
+        if(fusion_pos.x > 0)
+        {
+            fusion_pos.x = fusion_pos.x + x_offset;
+        }
+
+        fusion_pos.y = input.data[4]*256 + input.data[5];
+        if(fusion_pos.y < 0x8000)
+        {
+            fusion_pos.y = fusion_pos.y / 16;
+        }
+        else
+        {
+            fusion_pos.y = (fusion_pos.y - 0x10000)/16;
+        }
 
         fusion_pub.publish(fusion_pos);   //发布毫米波雷达和摄像头的融合位置
 
@@ -132,10 +183,19 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
         nearest.scale.x = 0.6;
         nearest.scale.y = 0.6;
         nearest.scale.z = 1.7;
-        nearest.color.r = 0;
-        nearest.color.g = 0.5;
+        nearest.color.r = 1;
+        nearest.color.g = 0;
         nearest.color.b = 0;
-        nearest.color.a = 0.7;
+
+        if(fusion_pos.x == 0)
+        {
+            nearest.color.a = 0;
+        }
+        else
+        {
+            nearest.color.a = 0.8;
+        }
+        
         nearest.lifetime = ros::Duration();
 
         obj_pub.publish(nearest);    //发布最近目标几何形状

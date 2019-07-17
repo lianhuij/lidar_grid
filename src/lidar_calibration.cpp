@@ -217,11 +217,11 @@ void LidarCloudHandler::calibration(const sensor_msgs::PointCloud2& input)
     pc_pub.publish(pcl_output);  //发布校正点云
 
     visualization_msgs::Marker marker;
+
     marker.header.frame_id = fixed_frame;
     marker.header.stamp = ros::Time::now();
     marker.type = visualization_msgs::Marker::CUBE;
     marker.action = visualization_msgs::Marker::ADD;
-
     marker.pose.position.x = 0;
     marker.pose.position.y = 0;
     marker.pose.position.z = -0.9;
@@ -229,14 +229,12 @@ void LidarCloudHandler::calibration(const sensor_msgs::PointCloud2& input)
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
-
-    marker.scale.x = 3.2;
-    marker.scale.y = 1.7;
-    marker.scale.z = 1.7;
-
+    marker.scale.x = 3;
+    marker.scale.y = 1.6;
+    marker.scale.z = 1.6;
     marker.color.r = 0;
     marker.color.g = 0;
-    marker.color.b = 0.5;
+    marker.color.b = 0.7;
     marker.color.a = 0.7;
 
     marker.lifetime = ros::Duration();
