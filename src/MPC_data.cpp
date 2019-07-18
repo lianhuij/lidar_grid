@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include "/home/lhj/catkin_ws/devel/include/can_msgs/Frame.h"
+#include <can_msgs/Frame.h>
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -52,14 +52,14 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
         geometry_msgs::Point radar_pos;
         geometry_msgs::Point camera_pos;
 
-        radar_pos.x = (input.data[0]*256 + input.data[1])/100;
+        radar_pos.x = (float)(input.data[0]*256 + input.data[1])/100;
 
         if(radar_pos.x > 0)
         {
             radar_pos.x = radar_pos.x + x_offset;
         }
 
-        radar_pos.y = input.data[2]*256 + input.data[3];
+        radar_pos.y = (float)(input.data[2]*256 + input.data[3]);
         if(radar_pos.y < 0x8000)
         {
             radar_pos.y = radar_pos.y / 10;
@@ -69,14 +69,14 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
             radar_pos.y = (radar_pos.y - 0x10000)/10;
         }
         
-        camera_pos.x = (input.data[4]*256 + input.data[5])/100;
+        camera_pos.x = (float)(input.data[4]*256 + input.data[5])/100;
 
         if(camera_pos.x > 0)
         {
             camera_pos.x = camera_pos.x + x_offset;
         }
 
-        camera_pos.y = input.data[6]*256 + input.data[7];
+        camera_pos.y = (float)(input.data[6]*256 + input.data[7]);
         if(camera_pos.y < 0x8000)
         {
             camera_pos.y = camera_pos.y / 16;
@@ -147,14 +147,14 @@ void MPCDataHandler::canHandler(const can_msgs::Frame& input)
     {
         geometry_msgs::Point fusion_pos;
 
-        fusion_pos.x = (input.data[0]*256 + input.data[1])/100;
+        fusion_pos.x = (float)(input.data[0]*256 + input.data[1])/100;
 
         if(fusion_pos.x > 0)
         {
             fusion_pos.x = fusion_pos.x + x_offset;
         }
 
-        fusion_pos.y = input.data[4]*256 + input.data[5];
+        fusion_pos.y = (float)(input.data[4]*256 + input.data[5]);
         if(fusion_pos.y < 0x8000)
         {
             fusion_pos.y = fusion_pos.y / 16;
